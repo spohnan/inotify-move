@@ -6,7 +6,7 @@
 # Couldn't figure out how to simulate a successful ssh password-less
 # login so if you set this to a hostname on which you've set up ssh
 # tests that rely upon this will be run and if not they will be skipped
-SSH_KEYS_CONFIGURED_ON_THIS_HOST=web-01
+SSH_KEYS_CONFIGURED_ON_THIS_HOST=
 
 
 # float_test - Used to compare floating point numbers using awk. Returns
