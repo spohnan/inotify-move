@@ -54,6 +54,29 @@ testSshSuccess() {
 }
 
 
+# rsync_supports_remove_option - Is version >= v2.6.9
+# ----------------------------------------------------------------------
+testRsyncSupportsRemoveOptionBadInput() {
+    assertFalse "Bad input" \
+        "rsync_supports_remove_option a.b.c"
+}
+
+testRsyncSupportsRemoveOptionTooLow() {
+    assertFalse "Rsync does not support remove option, version too old" \
+        "rsync_supports_remove_option 2.0"
+}
+
+testRsyncSupportsRemoveOptionEqualToVersion() {
+    assertTrue "Rsync supports remove option, equal to required version" \
+        "rsync_supports_remove_option 2.6.9"
+}
+
+testRsyncSupportsRemoveOptionGreaterThanVersion() {
+    assertTrue "Rsync supports remove option, greater than required version" \
+        "rsync_supports_remove_option 3.0.1"
+}
+
+
 # rsync_version - Parses out the version of rsync
 # ----------------------------------------------------------------------
 testRsyncVersion() {
