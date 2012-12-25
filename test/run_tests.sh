@@ -9,6 +9,70 @@
 SSH_KEYS_CONFIGURED_ON_THIS_HOST=
 
 
+# command line option parsing tests
+#
+# Usage: inotify-move.sh LOCAL_DIR REMOTE_USER@REMOTE_HOST:$REMOTE_DIR [$LOG]
+# ----------------------------------------------------------------------
+# These are all present as globals in the script, here just to silence
+# local IDE "errors"
+LOCAL_DIR=
+REMOTE_USER=
+REMOTE_HOST=
+REMOTE_DIR=
+LOG_FILE=
+USAGE_ERROR_STR=
+SSH_ERROR_STR=
+ERROR_STR=
+
+testBasicParsing() {
+    # Source the file again providing arguments
+    . $BASE_DIR/src/inotify-move.sh /tmp/from spohna@faraway:/tmp/to /tmp/move.log >/dev/null 2>&1
+    assertEquals $LOCAL_DIR "/tmp/from"
+    assertEquals $REMOTE_USER "spohna"
+    assertEquals $REMOTE_HOST "faraway"
+    assertEquals $REMOTE_DIR "/tmp/to"
+    assertEquals $LOG_FILE "/tmp/move.log"
+}
+
+testMissingAllArgs() {
+    . $BASE_DIR/src/inotify-move.sh  >/dev/null 2>&1
+    assertEquals "Required args missing should result in usage error str" \
+        "$USAGE_ERROR_STR" "$ERROR_STR"
+}
+
+testMissingArgSet() {
+    . $BASE_DIR/src/inotify-move.sh /tmp/from /tmp/move.log >/dev/null 2>&1
+    assertEquals "Required args missing should result in usage error str" \
+        "$USAGE_ERROR_STR" "$ERROR_STR"
+}
+
+testSingleRequiredArg() {
+    # Missing remote dir
+    . $BASE_DIR/src/inotify-move.sh /tmp/from spohna@faraway: /tmp/move.log >/dev/null 2>&1
+    assertEquals "Required args missing should result in usage error str" \
+        "$USAGE_ERROR_STR" "$ERROR_STR"
+}
+
+testSupplyingRsyncOptsNoLog() {
+    # externally specified opts but no log
+    RSYNC_OPTS="--quarter-past avz"
+    . $BASE_DIR/src/inotify-move.sh /tmp/from spohna@faraway:/tmp/to >/dev/null 2>&1
+    assertEquals "No log file specified, value should be empty" \
+        "" "$LOG_FILE"
+}
+
+testSupplyingRsyncOptsWithLogArg() {
+    # externally specified opts but no log
+    RSYNC_OPTS="--quarter-past avz"
+    . $BASE_DIR/src/inotify-move.sh /tmp/from spohna@faraway:/tmp/to /foo/bar.log >/dev/null 2>&1
+    assertEquals "Log file argument should have been parsed from cmd line" \
+        "/foo/bar.log" "$LOG_FILE"
+
+    $(echo $RSYNC_OPTS | grep -q log-file)
+    assertTrue "Although rsync opts were supplied it should have had log arg appended" \
+        $? # log file arg should have been added
+}
+
 # float_test - Used to compare floating point numbers using awk. Returns
 #              true or false based on evaluation of the expression
 # ----------------------------------------------------------------------
@@ -140,7 +204,7 @@ oneTimeTearDown() {
 BASE_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/.."
 
 # load code under test
-. $BASE_DIR/src/inotify-move.sh
+. $BASE_DIR/src/inotify-move.sh >/dev/null 2>&1
 
 # Run the tests
 . $BASE_DIR/test/shunit2/src/shunit2

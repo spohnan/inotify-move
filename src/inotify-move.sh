@@ -2,15 +2,15 @@
 #
 # inotify-move.sh
 #
-# Uses rsync and ssh for transfer, compression and encryption
-# Notification of file changes provided by inotify-tools which
-# is available in rpm packaging through the EPEL repo.
-# https://github.com/rvoicilas/inotify-tools/wiki/
+# Uses rsync and ssh for transfer, compression and encryption. Notification
+# of file changes provided by inotify-tools, available in rpm packaging from
+# the EPEL repo - https://github.com/rvoicilas/inotify-tools/wiki/
 #
-# Assumes you've set up your ssh key for password-less login
-# on the remote machine prior to running.
+# Notes: This assumes you've set up your ssh key for password-less login
+#        on the remote machine prior to running. It will also clobber files
+#        on the remote end if another file with the same name is synced.
 #
-# Usage: inotify-move.sh LOCAL_DIR REMOTE_USER@REMOTE_HOST:$DIRECTORY [$LOG]
+# Usage: inotify-move.sh LOCAL_DIR REMOTE_USER@REMOTE_HOST:REMOTE_DIR [LOG]
 
 
 # Parse command line options
@@ -21,12 +21,18 @@ REMOTE_HOST=$(echo $2 | cut -d: -f1 | cut -d@ -f2 )
 REMOTE_DIR=$(echo $2 | cut -d: -f2 )
 LOG_FILE=$3
 
+USAGE_ERROR_STR="Usage: inotify-move.sh LOCAL_DIR REMOTE_USER@REMOTE_HOST:REMOTE_DIR [LOG_FILE]"
+SSH_ERROR_STR="Error: ssh login to $REMOTE_USER@$REMOTE_HOST failed"
 
 # Allow for easy overriding of a set of default settings
 # ---------------------------------------------------------------------------
-RSYNC_OPTS=
 if [ -z "$RSYNC_OPTS" ] ; then
-    RSYNC_OPTS="--partial -avz -e ssh --log-file=$LOG_FILE"
+    RSYNC_OPTS="--partial -avz -e ssh"
+fi
+
+# If not already set and you give it a log file option add arg
+if [ ! -z $LOG_FILE ] && ! $(echo $RSYNC_OPTS | grep -q log-file) ; then
+    RSYNC_OPTS="$RSYNC_OPTS --log-file=$LOG_FILE"
 fi
 
 
@@ -137,6 +143,7 @@ init_inotify_move() {
 
 # If all the proper arguments have been supplied run the program
 # ---------------------------------------------------------------------------
+ERROR_STR=
 if [ -d $LOCAL_DIR ] && [ ! -z $REMOTE_USER ] && [ ! -z $REMOTE_HOST ] \
     && [ ! -z $REMOTE_DIR ] && verify_prereqs "inotifywait" ; then
 
@@ -144,8 +151,10 @@ if [ -d $LOCAL_DIR ] && [ ! -z $REMOTE_USER ] && [ ! -z $REMOTE_HOST ] \
      if login_with_key "$REMOTE_USER@$REMOTE_HOST" ; then
         init_inotify_move
      else
-        echo "Error: ssh login to $REMOTE_USER@$REMOTE_HOST failed"
+        ERROR_STR=$SSH_ERROR_STR
+        echo $ERROR_STR
      fi
 else
-    echo "Usage: inotify-move.sh LOCAL_DIR REMOTE_USER@REMOTE_HOST:REMOTE_DIR [LOG_FILE]"
+    ERROR_STR=$USAGE_ERROR_STR
+    echo $ERROR_STR
 fi
